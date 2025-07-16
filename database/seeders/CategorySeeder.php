@@ -3,28 +3,17 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
+use App\Models\Category;
 
 class CategorySeeder extends Seeder
 {
     public function run()
     {
-        DB::table('categories')->insert([
-            [
-                'name' => 'Programming',
-            ],
-            [
-                'name' => 'Data Science',
-            ],
-            [
-                'name' => 'Database',
-            ],
-            [
-                'name' => 'Computer Networks',
-            ],
-            [
-                'name' => 'Mathematics',
-            ],
+        Category::insert([
+            ['id' => 1, 'name' => 'Programming'],
+            ['id' => 2, 'name' => 'Data Science'],
+            ['id' => 3, 'name' => 'Database'],
+            ['id' => 4, 'name' => 'Networking'],
         ]);
     }
 }

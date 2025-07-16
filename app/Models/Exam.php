@@ -15,9 +15,18 @@ class Exam extends Model
         'category_id',
         'difficulty',
         'duration',
-        'color'
+        'color',
+        'passing_score',
+        'max_attempts',
+        'learning_objectives',
+        'prerequisites',
+        'tags',
     ];
-
+    protected $casts = [
+        'learning_objectives' => 'array',
+        'prerequisites' => 'array',
+        'tags' => 'array',
+    ];
     public function category()
     {
         return $this->belongsTo(Category::class);
