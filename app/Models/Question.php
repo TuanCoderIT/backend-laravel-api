@@ -14,6 +14,8 @@ class Question extends Model
         'options',
         'answer',
         'explanation',
+        'type',
+        'points',
     ];
 
     protected $casts = [
@@ -22,6 +24,6 @@ class Question extends Model
 
     public function exams()
     {
-        return $this->belongsToMany(Exam::class);
+        return $this->belongsToMany(Exam::class)->withPivot('order');
     }
 }

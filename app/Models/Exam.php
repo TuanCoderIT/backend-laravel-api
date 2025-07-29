@@ -21,6 +21,7 @@ class Exam extends Model
         'learning_objectives',
         'prerequisites',
         'tags',
+        'status',
     ];
     protected $casts = [
         'learning_objectives' => 'array',
@@ -34,7 +35,7 @@ class Exam extends Model
 
     public function questions()
     {
-        return $this->belongsToMany(Question::class);
+        return $this->belongsToMany(Question::class)->withPivot('order');
     }
 
     public function results()
