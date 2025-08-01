@@ -1,12 +1,14 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ExamController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ResultController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\QuestionController;
+use App\Http\Controllers\Api\RatingController;
 
 // Authentication routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -17,8 +19,18 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
+    // Results & Profile management
     Route::post('/results', [ResultController::class, 'store']);
     Route::get('/results', [ResultController::class, 'index']);
+    Route::get('/profile', [ProfileController::class, 'show']);
+    Route::put('/profile', [ProfileController::class, 'update']);
+    // Ratings management
+    Route::post('/ratings', [RatingController::class, 'store']);
+    Route::get('/ratings', [RatingController::class, 'index']);
+    Route::get('/ratings/my', [RatingController::class, 'myRatings']);
+    Route::put('/ratings/{rating}', [RatingController::class, 'update']);
+    Route::delete('/ratings/{rating}', [RatingController::class, 'destroy']);
+    Route::get('/ratings/stats', [RatingController::class, 'stats']);
 });
 
 // Public routes
