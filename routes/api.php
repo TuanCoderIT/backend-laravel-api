@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ExamController;
@@ -9,6 +10,10 @@ use App\Http\Controllers\Api\ResultController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\QuestionController;
 use App\Http\Controllers\Api\RatingController;
+use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\TransactionController;
+use App\Http\Controllers\Api\WalletController;
+use App\Http\Controllers\Api\PurchaseController;
 
 // Authentication routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -31,13 +36,26 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/ratings/{rating}', [RatingController::class, 'update']);
     Route::delete('/ratings/{rating}', [RatingController::class, 'destroy']);
     Route::get('/ratings/stats', [RatingController::class, 'stats']);
+    // Payment routes
+    Route::post('/top-up', [PaymentController::class, 'topUp']);
+    Route::get('/payment/callback', [PaymentController::class, 'handleCallback']);
+    // Transaction routes
+    Route::get('/me/transactions', [TransactionController::class, 'index']);
+    Route::get('/me/wallet', [WalletController::class, 'show']);
+    Route::get('/me/purchases', [PurchaseController::class, 'listMyPurchases']);
+    // Purchase routes
+    Route::post('/purchase', [PurchaseController::class, 'purchase']);
+    Route::get('/purchase/check', [PurchaseController::class, 'check']); // tuỳ chọn
 });
+// Payment return route
+Route::get('/payment/vnpay-return', [PaymentController::class, 'vnpayReturn'])->name('payment.vnpay.return');
 
 // Public routes
 Route::get('/exams', [ExamController::class, 'index']);
 Route::get('/exams/{id}', [ExamController::class, 'show']);
 
 Route::get('/categories', [CategoryController::class, 'index']);
+
 
 // Admin routes
 Route::prefix('admin')->middleware(['auth:sanctum', 'role:admin'])->group(function () {

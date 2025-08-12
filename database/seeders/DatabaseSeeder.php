@@ -22,10 +22,11 @@ class DatabaseSeeder extends Seeder
 
         // Thêm Seeder bạn cần gọi:
         $this->call([
-            CategorySeeder::class,
-            ExamSeeder::class,
-            QuestionSeeder::class,
-            ExamQuestionSeeder::class,
+            // CategorySeeder::class,
+            // ExamSeeder::class,
+            // QuestionSeeder::class,
+            // ExamQuestionSeeder::class,
+            TokenSeeder::class,
         ]);
     }
 }

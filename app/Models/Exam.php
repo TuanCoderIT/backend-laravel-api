@@ -47,4 +47,19 @@ class Exam extends Model
     {
         return $this->morphMany(Rating::class, 'rateable');
     }
+
+    public function purchaseLogs()
+    {
+        return $this->hasMany(PurchaseLog::class);
+    }
+
+    public function purchases()
+    {
+        return $this->morphMany(PurchaseLog::class, 'target');
+    }
+
+    public function tokenPricings()
+    {
+        return $this->morphMany(TokenPricing::class, 'target');
+    }
 }
