@@ -58,8 +58,8 @@ class Exam extends Model
         return $this->morphMany(PurchaseLog::class, 'target');
     }
 
-    public function tokenPricings()
+    public function tokenPricing()
     {
-        return $this->morphMany(TokenPricing::class, 'target');
+        return $this->morphOne(TokenPricing::class, 'target');
     }
 }

@@ -34,6 +34,7 @@ class ExamRequest extends FormRequest
             'prerequisites' => 'nullable|array',
             'tags' => 'nullable|array',
             'status' => 'required|in:Draft,Published,Archived',
+            'price_token' => 'nullable|integer|min:0|max:1000000',
         ];
     }
 }

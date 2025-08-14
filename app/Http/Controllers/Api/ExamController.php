@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ExamRequest;
-use App\Http\Resources\QuizResource;
 use App\Models\Exam;
 use Illuminate\Http\Request;
 use App\Models\TokenPricing;
@@ -22,12 +21,35 @@ class ExamController extends Controller
             $query->where('category_id', $request->category_id);
         }
 
-        return response()->json($query->get());
+        $exams = $query->get();
+        // Lấy giá token cho từng quiz
+        $exams->map(function ($exam) {
+            $exam->price_token = TokenPricing::where('target_type', 'quiz')
+                ->where('target_id', $exam->id)
+                ->value('price_token') ?? 0;
+            return $exam;
+        });
+
+        return response()->json($exams);
     }
     // POST /api/exams => tạo đề thi
     public function store(ExamRequest $request)
     {
-        $exam = Exam::create($request->validated());
+        // Bỏ price_token ra khỏi dữ liệu lưu exams
+        $examData = $request->except('price_token');
+        $exam = Exam::create($examData);
+
+        // Lưu token pricing
+        TokenPricing::updateOrCreate(
+            [
+                'target_type' => 'quiz',
+                'target_id'   => $exam->id
+            ],
+            [
+                'price_token' => $request->price_token ?? 0
+            ]
+        );
+
         return response()->json($exam, 201);
     }
 
@@ -53,7 +75,21 @@ class ExamController extends Controller
     public function update(ExamRequest $request, $id)
     {
         $exam = Exam::findOrFail($id);
-        $exam->update($request->validated());
+
+        // Cập nhật quiz
+        $examData = $request->except('price_token');
+        $exam->update($examData);
+        // Cập nhật giá token
+        TokenPricing::updateOrCreate(
+            [
+                'target_type' => 'quiz',
+                'target_id'   => $exam->id
+            ],
+            [
+                'price_token' => $request->price_token
+            ]
+        );
+
         return response()->json($exam);
     }
 
@@ -62,6 +98,11 @@ class ExamController extends Controller
     {
         $exam = Exam::findOrFail($id);
         $exam->delete();
+
+        TokenPricing::where('target_type', 'quiz')
+            ->where('target_id', $id)
+            ->delete();
+
         return response()->json(null, 204);
     }
 }
