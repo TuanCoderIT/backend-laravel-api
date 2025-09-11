@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use App\Models\Question;
+use App\Models\Exam;
 
 class DatabaseSeeder extends Seeder
 {
@@ -13,6 +15,7 @@ class DatabaseSeeder extends Seeder
     {
         // Nếu muốn giữ User mẫu thì để lại:
         // \App\Models\User::factory(10)->create();
+        // \App\Models\Exam::factory(100)->create();
 
         // Hoặc xoá nếu không cần:
         // \App\Models\User::factory()->create([
@@ -24,9 +27,9 @@ class DatabaseSeeder extends Seeder
         $this->call([
             // CategorySeeder::class,
             // ExamSeeder::class,
-            // QuestionSeeder::class,
+            QuestionSeeder::class,
             // ExamQuestionSeeder::class,
-            TokenSeeder::class,
+            // TokenSeeder::class,
         ]);
     }
 }

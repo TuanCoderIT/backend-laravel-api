@@ -16,6 +16,9 @@ return new class extends Migration
             $table->text('content');
             $table->json('options');  // ['A' => ..., 'B' => ...]
             $table->string('answer'); // Đáp án đúng
+            $table->text('explanation')->nullable();
+            $table->enum('type', ['multiple_choice', 'true_false', 'short_answer', 'essay'])->default('multiple_choice');
+            $table->integer('points')->default(1);
             $table->timestamps();
         });
     }

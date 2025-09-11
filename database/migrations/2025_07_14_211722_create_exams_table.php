@@ -19,6 +19,12 @@ return new class extends Migration
             $table->enum('difficulty', ['Beginner', 'Intermediate', 'Advanced']);
             $table->integer('duration'); // phút
             $table->string('color')->nullable();
+            $table->integer('passing_score')->default(70);
+            $table->integer('max_attempts')->default(3);
+            $table->json('learning_objectives')->nullable();
+            $table->json('prerequisites')->nullable();
+            $table->json('tags')->nullable();
+            $table->enum('status', ['draft', 'published', 'archived'])->default('draft');
             $table->timestamps();
         });
     }
