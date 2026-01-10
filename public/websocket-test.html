@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Realtime Test - Chat</title>
+    <script src="https://cdn.jsdelivr.net/npm/pusher-js@8.4.0/dist/web/pusher.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.0/dist/echo.iife.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 40px);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ef4444;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: #10b981;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .config-panel {
+            padding: 20px;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #374151;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input {
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 300px;
+            border-right: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            background: #f9fafb;
+        }
+
+        .thread-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .thread-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .thread-item:hover {
+            background: #f3f4f6;
+            transform: translateX(4px);
+        }
+
+        .thread-item.active {
+            border-color: #667eea;
+            background: #eef2ff;
+        }
+
+        .thread-item h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 5px;
+        }
+
+        .thread-item p {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #e5e7eb;
+            background: white;
+        }
+
+        .chat-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f9fafb;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .message.own {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .message-content {
+            max-width: 70%;
+            background: white;
+            padding: 12px 16px;
+            border-radius: 12px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .message.own .message-content {
+            background: #667eea;
+            color: white;
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .message-author {
+            font-size: 13px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .message.own .message-author {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #9ca3af;
+        }
+
+        .message.own .message-time {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .message-text {
+            font-size: 14px;
+            color: #111827;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .message.own .message-text {
+            color: white;
+        }
+
+        .typing-indicator {
+            padding: 10px 20px;
+            font-size: 13px;
+            color: #6b7280;
+            font-style: italic;
+        }
+
+        .typing-dots {
+            display: inline-block;
+        }
+
+        .typing-dots span {
+            display: inline-block;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: #6b7280;
+            margin: 0 2px;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+
+            0%,
+            60%,
+            100% {
+                transform: translateY(0);
+            }
+
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .input-area {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .input-form {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-form input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .input-form input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .log-panel {
+            height: 200px;
+            background: #1f2937;
+            color: #10b981;
+            padding: 15px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            border-top: 1px solid #374151;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-left: 3px solid #10b981;
+            padding-left: 10px;
+        }
+
+        .log-entry.error {
+            border-left-color: #ef4444;
+            color: #fca5a5;
+        }
+
+        .log-entry.warning {
+            border-left-color: #f59e0b;
+            color: #fcd34d;
+        }
+
+        .log-entry.info {
+            border-left-color: #3b82f6;
+            color: #93c5fd;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #9ca3af;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔌 WebSocket Realtime Test - Chat</h1>
+            <div class="connection-status">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Disconnected</span>
+            </div>
+        </div>
+
+        <div class="config-panel">
+            <div class="config-grid">
+                <div class="form-group">
+                    <label>API URL</label>
+                    <input type="text" id="apiUrl" value="http://localhost:8000/api"
+                        placeholder="http://localhost:8000/api">
+                </div>
+                <div class="form-group">
+                    <label>Reverb Host</label>
+                    <input type="text" id="reverbHost" value="localhost" placeholder="localhost">
+                </div>
+                <div class="form-group">
+                    <label>Reverb Port</label>
+                    <input type="text" id="reverbPort" value="8080" placeholder="8080">
+                </div>
+                <div class="form-group">
+                    <label>Reverb App Key</label>
+                    <input type="text" id="reverbKey" value="" placeholder="Your Reverb App Key">
+                </div>
+                <div class="form-group">
+                    <label>Auth Token</label>
+                    <input type="text" id="authToken" value="" placeholder="Bearer Token">
+                </div>
+                <div class="form-group">
+                    <label>Thread ID</label>
+                    <input type="number" id="threadId" value="1" placeholder="Thread ID">
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="connect()">Connect</button>
+                <button class="btn btn-danger" onclick="disconnect()" disabled id="disconnectBtn">Disconnect</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="thread-list" id="threadList">
+                    <div class="thread-item active" onclick="selectThread(1)">
+                        <h3>Thread #1</h3>
+                        <p>Test thread</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-area">
+                <div class="chat-header">
+                    <h2>Thread #<span id="currentThreadId">1</span></h2>
+                </div>
+                <div class="messages-container" id="messagesContainer">
+                    <div class="empty-state">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z">
+                            </path>
+                        </svg>
+                        <p>No messages yet. Connect and start chatting!</p>
+                    </div>
+                </div>
+                <div class="typing-indicator" id="typingIndicator" style="display: none;">
+                    <span id="typingUser"></span> đang gõ<span
+                        class="typing-dots"><span></span><span></span><span></span></span>
+                </div>
+                <div class="input-area">
+                    <form class="input-form" onsubmit="sendMessage(event)">
+                        <input type="text" id="messageInput" placeholder="Nhập tin nhắn..." disabled>
+                        <button type="submit" class="btn btn-primary" disabled id="sendBtn">Gửi</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="log-panel" id="logPanel">
+            <div class="log-entry info">Ready to connect. Fill in the configuration and click Connect.</div>
+        </div>
+    </div>
+
+    <script>
+        let echo = null;
+        let currentChannel = null;
+        let isConnected = false;
+
+        function log(message, type = 'info') {
+            const logPanel = document.getElementById('logPanel');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            logPanel.appendChild(entry);
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+
+        function updateStatus(connected) {
+            isConnected = connected;
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const sendBtn = document.getElementById('sendBtn');
+            const messageInput = document.getElementById('messageInput');
+
+            if (connected) {
+                statusDot.classList.add('connected');
+                statusText.textContent = 'Connected';
+                disconnectBtn.disabled = false;
+                sendBtn.disabled = false;
+                messageInput.disabled = false;
+            } else {
+                statusDot.classList.remove('connected');
+                statusText.textContent = 'Disconnected';
+                disconnectBtn.disabled = true;
+                sendBtn.disabled = true;
+                messageInput.disabled = true;
+            }
+        }
+
+        function connect() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const reverbHost = document.getElementById('reverbHost').value;
+            const reverbPort = document.getElementById('reverbPort').value;
+            const reverbKey = document.getElementById('reverbKey').value;
+            const authToken = document.getElementById('authToken').value;
+
+            if (!reverbKey || !authToken) {
+                log('Please fill in Reverb App Key and Auth Token', 'error');
+                return;
+            }
+
+            try {
+                // Disconnect existing connection
+                if (echo) {
+                    echo.disconnect();
+                }
+
+                log('Connecting to Reverb...', 'info');
+
+                echo = new Echo({
+                    broadcaster: 'reverb',
+                    key: reverbKey,
+                    wsHost: reverbHost,
+                    wsPort: parseInt(reverbPort),
+                    wssPort: parseInt(reverbPort),
+                    forceTLS: false,
+                    enabledTransports: ['ws', 'wss'],
+                    authEndpoint: `${apiUrl.replace('/api', '')}/broadcasting/auth`,
+                    auth: {
+                        headers: {
+                            Authorization: `Bearer ${authToken}`,
+                        },
+                    },
+                });
+
+                // Connection events
+                echo.connector.pusher.connection.bind('connected', () => {
+                    log('✅ Connected to Reverb server', 'info');
+                    updateStatus(true);
+                    subscribeToChannel();
+                });
+
+                echo.connector.pusher.connection.bind('disconnected', () => {
+                    log('❌ Disconnected from Reverb server', 'warning');
+                    updateStatus(false);
+                });
+
+                echo.connector.pusher.connection.bind('error', (error) => {
+                    log(`❌ Connection error: ${JSON.stringify(error)}`, 'error');
+                    updateStatus(false);
+                });
+
+                echo.connector.pusher.connection.bind('state_change', (states) => {
+                    log(`State changed: ${states.previous} → ${states.current}`, 'info');
+                });
+
+            } catch (error) {
+                log(`Error initializing Echo: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        function disconnect() {
+            if (echo) {
+                log('Disconnecting...', 'info');
+                echo.disconnect();
+                echo = null;
+                currentChannel = null;
+                updateStatus(false);
+                log('Disconnected', 'info');
+            }
+        }
+
+        function subscribeToChannel() {
+            if (!echo) return;
+
+            const threadId = document.getElementById('threadId').value;
+            const channelName = `private-chat.thread.${threadId}`;
+
+            // Unsubscribe previous channel
+            if (currentChannel) {
+                echo.leave(channelName);
+            }
+
+            log(`Subscribing to channel: ${channelName}`, 'info');
+
+            try {
+                currentChannel = echo.private(`chat.thread.${threadId}`);
+
+                // Listen for new messages
+                currentChannel.listen('.message.created', (e) => {
+                    log(`📨 Received message: ${JSON.stringify(e.message)}`, 'info');
+                    addMessage(e.message);
+                });
+
+                // Listen for typing indicator
+                currentChannel.listen('.user.typing', (e) => {
+                    log(`⌨️ User typing: ${e.userName}`, 'info');
+                    showTypingIndicator(e.userName);
+                });
+
+                // Listen for read receipt
+                currentChannel.listen('.thread.read', (e) => {
+                    log(`👁️ Thread read by: ${e.userName}`, 'info');
+                });
+
+                // Subscription events
+                currentChannel.subscribed(() => {
+                    log(`✅ Subscribed to channel: ${channelName}`, 'info');
+                });
+
+                currentChannel.error((error) => {
+                    log(`❌ Channel error: ${JSON.stringify(error)}`, 'error');
+                });
+
+            } catch (error) {
+                log(`Error subscribing to channel: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        function addMessage(message) {
+            const container = document.getElementById('messagesContainer');
+
+            // Remove empty state if exists
+            const emptyState = container.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+
+            // Determine if message is from current user (you can modify this logic)
+            const isOwn = message.user_id === parseInt(localStorage.getItem('currentUserId') || '0');
+            if (isOwn) {
+                messageDiv.classList.add('own');
+            }
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = message.user?.name?.charAt(0).toUpperCase() || 'U';
+
+            const content = document.createElement('div');
+            content.className = 'message-content';
+
+            const header = document.createElement('div');
+            header.className = 'message-header';
+
+            const author = document.createElement('div');
+            author.className = 'message-author';
+            author.textContent = message.user?.name || 'Unknown';
+
+            const time = document.createElement('div');
+            time.className = 'message-time';
+            time.textContent = new Date(message.created_at).toLocaleTimeString();
+
+            header.appendChild(author);
+            header.appendChild(time);
+
+            const text = document.createElement('div');
+            text.className = 'message-text';
+            text.textContent = message.content || '(No content)';
+
+            content.appendChild(header);
+            content.appendChild(text);
+
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(content);
+
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function showTypingIndicator(userName) {
+            const indicator = document.getElementById('typingIndicator');
+            const typingUser = document.getElementById('typingUser');
+            typingUser.textContent = userName;
+            indicator.style.display = 'block';
+
+            // Hide after 3 seconds
+            setTimeout(() => {
+                indicator.style.display = 'none';
+            }, 3000);
+        }
+
+        async function sendMessage(event) {
+            event.preventDefault();
+
+            if (!isConnected) {
+                log('Not connected. Please connect first.', 'error');
+                return;
+            }
+
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            const threadId = document.getElementById('threadId').value;
+            const apiUrl = document.getElementById('apiUrl').value;
+            const authToken = document.getElementById('authToken').value;
+
+            if (!message) return;
+
+            try {
+                log(`Sending message: ${message}`, 'info');
+
+                const response = await fetch(`${apiUrl}/chat/threads/${threadId}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`,
+                    },
+                    body: JSON.stringify({
+                        content: message,
+                    }),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ Message sent successfully`, 'info');
+                    messageInput.value = '';
+
+                    // Message will be added via WebSocket event
+                    // But we can also add it optimistically
+                    addMessage(data);
+                } else {
+                    const error = await response.text();
+                    log(`❌ Failed to send message: ${error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Error sending message: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        function selectThread(threadId) {
+            document.getElementById('threadId').value = threadId;
+            document.getElementById('currentThreadId').textContent = threadId;
+
+            // Update active thread in sidebar
+            document.querySelectorAll('.thread-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+
+            // Clear messages
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = '<div class="empty-state"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg><p>No messages yet. Connect and start chatting!</p></div>';
+
+            // Resubscribe if connected
+            if (isConnected) {
+                subscribeToChannel();
+            }
+        }
+
+        // Load saved config from localStorage
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedConfig = localStorage.getItem('websocketTestConfig');
+            if (savedConfig) {
+                const config = JSON.parse(savedConfig);
+                document.getElementById('apiUrl').value = config.apiUrl || 'http://localhost:8000/api';
+                document.getElementById('reverbHost').value = config.reverbHost || 'localhost';
+                document.getElementById('reverbPort').value = config.reverbPort || '8080';
+                document.getElementById('reverbKey').value = config.reverbKey || '';
+                document.getElementById('authToken').value = config.authToken || '';
+                document.getElementById('threadId').value = config.threadId || '1';
+            }
+
+            // Save config on change
+            ['apiUrl', 'reverbHost', 'reverbPort', 'reverbKey', 'authToken', 'threadId'].forEach(id => {
+                document.getElementById(id).addEventListener('change', () => {
+                    const config = {
+                        apiUrl: document.getElementById('apiUrl').value,
+                        reverbHost: document.getElementById('reverbHost').value,
+                        reverbPort: document.getElementById('reverbPort').value,
+                        reverbKey: document.getElementById('reverbKey').value,
+                        authToken: document.getElementById('authToken').value,
+                        threadId: document.getElementById('threadId').value,
+                    };
+                    localStorage.setItem('websocketTestConfig', JSON.stringify(config));
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

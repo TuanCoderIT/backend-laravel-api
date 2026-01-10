@@ -22,6 +22,7 @@ class Exam extends Model
         'prerequisites',
         'tags',
         'status',
+        'is_ai_generated',
     ];
     protected $casts = [
         'learning_objectives' => 'array',

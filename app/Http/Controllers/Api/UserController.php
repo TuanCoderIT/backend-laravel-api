@@ -21,7 +21,7 @@ class UserController extends Controller
 
         if ($request->hasFile('avatar')) {
             $file = $request->file('avatar');
-            $filename =  time() . '-' . $file->getClientOriginalName();
+            $filename = time() . '-' . $file->getClientOriginalName();
             $path = $file->storeAs('uploads/avatars', $filename, 'public'); // lưu trong storage/app/public/uploads/avatars
             $data['avatar'] = asset('storage/uploads/avatars/' . $filename); // Tạo URL đầy đủ luôn
         }
@@ -48,7 +48,6 @@ class UserController extends Controller
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
-        // Xóa ảnh cũ nếu có
         if ($request->hasFile('avatar')) {
             if ($user->avatar && Storage::exists($user->avatar)) {
                 Storage::delete($user->avatar);

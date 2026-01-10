@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('token_pricings', function (Blueprint $table) {
             $table->id();
-            $table->string('target_type'); // 'quiz', 'material', ...
+            $table->string('target_type'); // 'quiz', 'docs', 'course',...
             $table->unsignedBigInteger('target_id');
             $table->integer('price_token');
             $table->timestamps();

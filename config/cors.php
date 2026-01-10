@@ -14,6 +14,12 @@ return [
     | To learn more: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
     |
     */
+    'paths' => [
+        'api/*',
+        'sanctum/csrf-cookie',
+        'storage/*',
+        'broadcasting/auth',
+    ],
 
     // 'paths' => ['api/*', 'sanctum/csrf-cookie', 'login', 'register', 'logout'],
 
@@ -28,7 +34,7 @@ return [
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => [],
+    'exposed_headers' => ['Content-Disposition'],
 
     'supports_credentials' => false, // Bearer token → false
 

@@ -56,4 +56,61 @@ class User extends Authenticatable
             'last_login' => 'datetime',
         ];
     }
+
+    /**
+     * Kiểm tra xem user có phải là admin không
+     *
+     * @return bool
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    // --- Relations ---
+    public function courseProgress()
+    {
+        return $this->hasMany(CourseProgress::class);
+    }
+
+    public function unlockedLessons()
+    {
+        return $this->hasMany(CourseUnlock::class);
+    }
+
+    // Kiểm tra bài đã mở khóa
+    public function hasUnlocked($lessonId)
+    {
+        return $this->unlockedLessons()->where('lesson_id', $lessonId)->exists();
+    }
+
+    public function posts()
+    {
+        return $this->hasMany(Post::class);
+    }
+
+    public function groupMemberships()
+    {
+        return $this->hasMany(GroupMember::class);
+    }
+
+    public function groupsOwned()
+    {
+        return $this->hasMany(Group::class, 'owner_id');
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    public function reactions()
+    {
+        return $this->hasMany(Reaction::class);
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(PostComment::class);
+    }
 }

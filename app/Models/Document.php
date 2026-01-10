@@ -2,29 +2,36 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
 class Document extends Model implements HasMedia
 {
-    use InteractsWithMedia;
+    use HasFactory, InteractsWithMedia;
 
     protected $fillable = [
         'owner_id',
+        'category_id',
         'title',
         'description',
         'is_premium',
-        'price_tokens',
         'status',
+        'file_url',
+        'file_type',
+        'file_size',
+        'thumbnail',
     ];
 
-    protected $appends = ['latest_file_url'];
+    protected $casts = [
+        'is_premium' => 'boolean',
+        'file_size' => 'integer',
+    ];
 
-    public function getLatestFileUrlAttribute()
+    public function category()
     {
-        $media = $this->latestVersion?->media;
-        return $media ? $media->getUrl() : null;
+        return $this->belongsTo(Category::class, 'category_id');
     }
 
     public function owner()
@@ -32,13 +39,17 @@ class Document extends Model implements HasMedia
         return $this->belongsTo(User::class, 'owner_id');
     }
 
-    public function versions()
+    public function registerMediaCollections(): void
     {
-        return $this->hasMany(DocumentVersion::class);
-    }
+        // 🟦 PDF collection
+        $this->addMediaCollection('documents')
+            ->useDisk('public')
+            ->acceptsMimeTypes(['application/pdf']);
 
-    public function latestVersion()
-    {
-        return $this->hasOne(DocumentVersion::class)->latestOfMany();
+        // 🟩 Thumbnail collection (ảnh)
+        $this->addMediaCollection('thumbnails')
+            ->singleFile() // chỉ giữ ảnh cuối cùng
+            ->useDisk('public')
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp']);
     }
 }

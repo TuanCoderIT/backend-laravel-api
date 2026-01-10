@@ -13,4 +13,9 @@ class TokenPricing extends Model
         'target_id',
         'price_token',
     ];
+
+    public function target()
+    {
+        return $this->morphTo();
+    }
 }

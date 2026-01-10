@@ -24,4 +24,9 @@ class AppServiceProvider extends ServiceProvider
             return 'http://localhost:3000/auth/reset-password?token=' . $token . '&email=' . urlencode($notifiable->getEmailForPasswordReset());
         });
     }
+    
+    protected $policies = [
+        Course::class => CoursePolicy::class,
+    ];
+    
 }

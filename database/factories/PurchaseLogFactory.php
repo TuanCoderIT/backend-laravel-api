@@ -16,8 +16,9 @@ class PurchaseLogFactory extends Factory
      */
     public function definition(): array
     {
+        $types = ['quiz', 'document'];
         return [
-            'target_type' => 'quiz',
+            'target_type' => $this->faker->randomElement($types),
             'target_id' => $this->faker->numberBetween(1, 20),
             'token_spent' => $this->faker->randomElement([5, 10, 15]),
         ];

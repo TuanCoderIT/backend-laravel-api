@@ -38,10 +38,19 @@ return [
             'report' => false,
         ],
 
+        'cloudinary' => [
+            'driver' => 'cloudinary',
+            // Sử dụng CLOUDINARY_URL từ .env (format: cloudinary://api_key:api_secret@cloud_name)
+            // Đây là cách được khuyến nghị để cấu hình Cloudinary
+            'url' => env('CLOUDINARY_URL'),
+            // Prefix để tổ chức files trên Cloudinary (optional)
+            'prefix' => env('CLOUDINARY_PREFIX', ''),
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => env('APP_URL').'/storage',
+            'url' => env('APP_URL') . '/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

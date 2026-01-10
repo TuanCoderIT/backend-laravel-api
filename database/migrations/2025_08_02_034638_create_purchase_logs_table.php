@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('purchase_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('target_type'); // 'quiz' or 'material'
+            $table->string('target_type'); // 'quiz' or 'docs'
             $table->unsignedBigInteger('target_id');
             $table->integer('token_spent');
             $table->timestamps();
