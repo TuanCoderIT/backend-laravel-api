@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\{
     RealtimeController,
     AIChatController,
     UserAIQuizController,
+    NotificationController,
 };
 use App\Http\Controllers\Admin\{
     DashboardController,
@@ -320,6 +321,31 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('realtime')->group(function () {
         Route::get('/connection-info', [RealtimeController::class, 'getConnectionInfo']);
         Route::post('/test-connection', [RealtimeController::class, 'testConnection']);
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | NOTIFICATIONS
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('notifications')->group(function () {
+        // Danh sách và thống kê
+        Route::get('/', [NotificationController::class, 'index']);
+        Route::get('/unread', [NotificationController::class, 'unread']);
+        Route::get('/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::get('/stats', [NotificationController::class, 'stats']);
+        
+        // Actions
+        Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+        Route::delete('/clear-read', [NotificationController::class, 'clearRead']);
+        
+        // Individual notification
+        Route::get('/{id}', [NotificationController::class, 'show']);
+        Route::post('/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::delete('/{id}', [NotificationController::class, 'destroy']);
+        
+        // Create (for testing/admin)
+        Route::post('/', [NotificationController::class, 'store']);
     });
 
 });
