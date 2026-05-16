@@ -30,6 +30,9 @@ use App\Http\Controllers\Api\{
     AIChatController,
     UserAIQuizController,
     NotificationController,
+    FlashcardSetController,
+    FlashcardController,
+    FlashcardStudyController,
 };
 use App\Http\Controllers\Admin\{
     DashboardController,
@@ -37,6 +40,7 @@ use App\Http\Controllers\Admin\{
     AdminGroupController,
     AdminGroupOwnerController,
     AIQuizController,
+    FlashcardModerationController,
 };
 
 /*
@@ -44,6 +48,7 @@ use App\Http\Controllers\Admin\{
 | Admin Routes
 |--------------------------------------------------------------------------
 */
+
 Route::prefix('admin')
     ->middleware(['auth:sanctum', 'role:admin'])
     ->group(function () {
@@ -89,6 +94,27 @@ Route::prefix('admin')
         Route::get('/posts/{id}', [AdminPostController::class, 'show']);
         Route::delete('/posts/{id}', [AdminPostController::class, 'destroy']);
         Route::post('/posts/{id}/hide', [AdminPostController::class, 'hide']);
+
+        // ===== Flashcard Sets =====
+        Route::get(
+            'flashcard-sets/pending',
+            [FlashcardModerationController::class, 'pending']
+        );
+
+        Route::post(
+            'flashcard-sets/{flashcardSet}/approve',
+            [FlashcardModerationController::class, 'approve']
+        );
+
+        Route::post(
+            'flashcard-sets/{flashcardSet}/reject',
+            [FlashcardModerationController::class, 'reject']
+        );
+
+        Route::post(
+            'flashcard-sets/{flashcardSet}/archive',
+            [FlashcardModerationController::class, 'archive']
+        );
     });
 
 // Route::prefix('admin/community/reports')->middleware(['auth:sanctum', 'is_admin'])->group(function () {
@@ -297,7 +323,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('chat')->group(function () {
         // AI Assistant
         Route::post('/ai-assistant', [AIChatController::class, 'chat']);
-        
+
         // Threads
         Route::get('/threads', [ChatController::class, 'myThreads']);
         Route::post('/threads/direct', [ChatController::class, 'directThread']);
@@ -334,18 +360,51 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/unread', [NotificationController::class, 'unread']);
         Route::get('/unread-count', [NotificationController::class, 'unreadCount']);
         Route::get('/stats', [NotificationController::class, 'stats']);
-        
+
         // Actions
         Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
         Route::delete('/clear-read', [NotificationController::class, 'clearRead']);
-        
+
         // Individual notification
         Route::get('/{id}', [NotificationController::class, 'show']);
         Route::post('/{id}/read', [NotificationController::class, 'markAsRead']);
         Route::delete('/{id}', [NotificationController::class, 'destroy']);
-        
+
         // Create (for testing/admin)
         Route::post('/', [NotificationController::class, 'store']);
     });
+});
 
+Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('flashcard-sets', FlashcardSetController::class);
+
+    Route::post(
+        'flashcard-sets/{flashcardSet}/submit',
+        [FlashcardSetController::class, 'submit']
+    );
+
+    Route::post(
+        'flashcard-sets/{flashcardSet}/cards',
+        [FlashcardController::class, 'store']
+    );
+
+    Route::put(
+        'flashcards/{flashcard}',
+        [FlashcardController::class, 'update']
+    );
+
+    Route::delete(
+        'flashcards/{flashcard}',
+        [FlashcardController::class, 'destroy']
+    );
+
+    Route::get(
+        'flashcard-sets/{flashcardSet}/study',
+        [FlashcardStudyController::class, 'study']
+    );
+
+    Route::post(
+        'flashcards/{flashcard}/review',
+        [FlashcardStudyController::class, 'review']
+    );
 });
