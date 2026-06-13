@@ -29,7 +29,12 @@ class User extends Authenticatable
         'phone_number',
         'date_of_birth',
         'bio',
-        'last_login'
+        'last_login',
+        'xp',
+        'current_streak',
+        'longest_streak',
+        'last_activity_at',
+        'streak_freezes',
     ];
 
     /**
@@ -54,6 +59,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'date_of_birth' => 'datetime',
             'last_login' => 'datetime',
+            'last_activity_at' => 'datetime',
         ];
     }
 
@@ -112,5 +118,17 @@ class User extends Authenticatable
     public function comments()
     {
         return $this->hasMany(PostComment::class);
+    }
+
+    public function userAchievements()
+    {
+        return $this->hasMany(UserAchievement::class);
+    }
+
+    public function achievements()
+    {
+        return $this->belongsToMany(Achievement::class, 'user_achievements')
+            ->withPivot('unlocked_at')
+            ->withTimestamps();
     }
 }

@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\{
     ExamController,
     CategoryController,
     ResultController,
+    ResultFlashcardController,
     UserController,
     QuestionController,
     RatingController,
@@ -33,6 +34,8 @@ use App\Http\Controllers\Api\{
     FlashcardSetController,
     FlashcardController,
     FlashcardStudyController,
+    GamificationController,
+    LeaderboardController,
 };
 use App\Http\Controllers\Admin\{
     DashboardController,
@@ -41,6 +44,7 @@ use App\Http\Controllers\Admin\{
     AdminGroupOwnerController,
     AIQuizController,
     FlashcardModerationController,
+    AchievementController,
 };
 
 /*
@@ -60,6 +64,7 @@ Route::prefix('admin')
         Route::apiResource('users', UserController::class);
         Route::apiResource('courses', CourseController::class);
         Route::apiResource('documents', DocumentController::class);
+        Route::apiResource('achievements', AchievementController::class);
         Route::prefix('courses/{course}')->group(function () {
             Route::get('chapters', [CourseChapterController::class, 'index']);
             Route::post('chapters', [CourseChapterController::class, 'store']);
@@ -174,6 +179,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', 'logout');
         Route::get('/user', 'user');
     });
+
+    // Gamification
+    Route::prefix('me')->group(function () {
+        Route::get('/achievements', [GamificationController::class, 'achievements']);
+        Route::get('/gamification-summary', [GamificationController::class, 'summary']);
+        Route::get('/xp-logs', [GamificationController::class, 'xpLogs']);
+    });
+
+    // Leaderboard
+    Route::controller(LeaderboardController::class)->group(function () {
+        Route::get('/leaderboard', 'index');
+    });
+
     // Profile
     Route::controller(ProfileController::class)->group(function () {
         Route::get('/profile', 'show');
@@ -184,6 +202,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/results', 'index');
         Route::post('/results', 'store');
     });
+
+    Route::post(
+        '/results/{result}/generate-wrong-answer-flashcards',
+        [ResultFlashcardController::class, 'store']
+    );
     // Ratings
     Route::controller(RatingController::class)->group(function () {
         Route::get('/ratings', 'index');
@@ -376,7 +399,22 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get(
+        'flashcard-sets/public',
+        [FlashcardSetController::class, 'publicIndex']
+    );
+
+    Route::get(
+        'flashcard-sets/summary',
+        [FlashcardSetController::class, 'summary']
+    );
+
     Route::apiResource('flashcard-sets', FlashcardSetController::class);
+
+    Route::post(
+        'flashcard-sets/{flashcardSet}/publish',
+        [FlashcardSetController::class, 'publish']
+    );
 
     Route::post(
         'flashcard-sets/{flashcardSet}/submit',

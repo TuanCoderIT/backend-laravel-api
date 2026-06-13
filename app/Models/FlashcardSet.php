@@ -14,21 +14,10 @@ class FlashcardSet extends Model
         'category_id',
         'title',
         'description',
+        'visibility',
         'source_type',
-        'is_ai_generated',
-        'exam_id',
-        'color',
         'status',
-        'submitted_at',
-        'reviewed_at',
-        'reviewed_by',
-        'review_notes',
-    ];
-
-    protected $casts = [
-        'is_ai_generated' => 'boolean',
-        'submitted_at' => 'datetime',
-        'reviewed_at' => 'datetime',
+        'exam_id',
     ];
 
     /*
@@ -55,12 +44,6 @@ class FlashcardSet extends Model
         return $this->belongsTo(Category::class);
     }
 
-    // Admin đã duyệt
-    public function reviewer()
-    {
-        return $this->belongsTo(User::class, 'reviewed_by');
-    }
-
     // Danh sách flashcards
     public function flashcards()
     {
@@ -78,14 +61,14 @@ class FlashcardSet extends Model
         return $query->where('status', 'published');
     }
 
-    public function scopePending($query)
+    public function scopePublic($query)
     {
-        return $query->where('status', 'pending');
+        return $query->where('visibility', 'public');
     }
 
     public function scopeAiGenerated($query)
     {
-        return $query->where('is_ai_generated', true);
+        return $query->where('source_type', 'ai_generated');
     }
 
     /*

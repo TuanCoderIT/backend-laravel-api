@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\FlashcardSetResource;
 use App\Models\FlashcardSet;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -11,91 +12,38 @@ class FlashcardModerationController extends Controller
 {
     /**
      * GET /api/admin/flashcard-sets/pending
-     * Danh sách bộ thẻ chờ duyệt.
+     * Deprecated: flashcard sets no longer require moderation.
      */
     public function pending(Request $request): JsonResponse
     {
-        // TODO: Thêm middleware kiểm tra admin.
-        $flashcardSets = FlashcardSet::with([
-            'user:id,name',
-            'quiz:id,title',
-        ])
-            ->withCount('flashcards')
-            ->where('status', 'pending')
-            ->latest('submitted_at')
-            ->paginate(20);
-
         return response()->json([
-            'success' => true,
-            'message' => 'Lấy danh sách bộ thẻ chờ duyệt thành công.',
-            'data' => $flashcardSets,
-        ]);
+            'success' => false,
+            'message' => 'Flashcard moderation đã deprecated. Bộ thẻ public không cần admin duyệt.',
+        ], 410);
     }
 
     /**
      * POST /api/admin/flashcard-sets/{flashcardSet}/approve
-     * Duyệt bộ thẻ.
+     * Deprecated: flashcard sets no longer require moderation.
      */
     public function approve(Request $request, FlashcardSet $flashcardSet): JsonResponse
     {
-        // TODO: Thêm middleware kiểm tra admin.
-
-        if ($flashcardSet->status !== 'pending') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Chỉ có thể duyệt bộ thẻ đang ở trạng thái pending.',
-            ], 422);
-        }
-
-        $flashcardSet->update([
-            'status' => 'published',
-            'reviewed_by' => $request->user()->id,
-            'reviewed_at' => now(),
-            'review_notes' => $request->input('review_notes'),
-        ]);
-
         return response()->json([
-            'success' => true,
-            'message' => 'Duyệt bộ thẻ thành công.',
-            'data' => $flashcardSet->fresh()
-                ->load(['user:id,name', 'reviewer:id,name'])
-                ->loadCount('flashcards'),
-        ]);
+            'success' => false,
+            'message' => 'Flashcard approve đã deprecated. Bộ thẻ public không cần admin duyệt.',
+        ], 410);
     }
 
     /**
      * POST /api/admin/flashcard-sets/{flashcardSet}/reject
-     * Từ chối bộ thẻ.
+     * Deprecated: flashcard sets no longer require moderation.
      */
     public function reject(Request $request, FlashcardSet $flashcardSet): JsonResponse
     {
-        // TODO: Thêm middleware kiểm tra admin.
-
-        if ($flashcardSet->status !== 'pending') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Chỉ có thể từ chối bộ thẻ đang ở trạng thái pending.',
-            ], 422);
-        }
-
-        $validated = $request->validate([
-            'review_notes' => ['required', 'string'],
-        ]);
-
-        $flashcardSet->update([
-            'status' => 'rejected',
-            'reviewed_by' => $request->user()->id,
-            'reviewed_at' => now(),
-            'review_notes' => $validated['review_notes'],
-        ]);
-
         return response()->json([
-            'success' => true,
-            'message' => 'Đã từ chối bộ thẻ.',
-            'data' => $flashcardSet->fresh()
-                ->load(['user:id,name', 'reviewer:id,name'])
-                ->loadCount('flashcards'),
-        ]);
+            'success' => false,
+            'message' => 'Flashcard reject đã deprecated. Bộ thẻ public không cần admin duyệt.',
+        ], 410);
     }
 
     /**
@@ -104,20 +52,18 @@ class FlashcardModerationController extends Controller
      */
     public function archive(Request $request, FlashcardSet $flashcardSet): JsonResponse
     {
-        // TODO: Thêm middleware kiểm tra admin.
-
         $flashcardSet->update([
             'status' => 'archived',
-            'reviewed_by' => $request->user()->id,
-            'reviewed_at' => now(),
         ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Đã lưu trữ bộ thẻ.',
-            'data' => $flashcardSet->fresh()
-                ->load(['user:id,name', 'reviewer:id,name'])
-                ->loadCount('flashcards'),
+            'data' => new FlashcardSetResource(
+                $flashcardSet->fresh()
+                    ->load(['user:id,name', 'category:id,name'])
+                    ->loadCount('flashcards')
+            ),
         ]);
     }
 }

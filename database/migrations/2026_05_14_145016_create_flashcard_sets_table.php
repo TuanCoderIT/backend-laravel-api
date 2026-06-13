@@ -26,27 +26,22 @@ return new class extends Migration
             $table->string('title');
             $table->text('description')->nullable();
 
-            // manual | quiz_wrong_answers | ai_generated
+            $table->enum('visibility', [
+                'private',
+                'public',
+            ])->default('private');
+
             $table->enum('source_type', [
                 'manual',
                 'quiz_wrong_answers',
                 'ai_generated',
             ])->default('manual');
 
-            $table->boolean('is_ai_generated')->default(false);
-
             $table->enum('status', [
                 'draft',
-                'pending',
                 'published',
-                'rejected',
                 'archived',
-            ])->default('draft');
-
-            $table->timestamp('submitted_at')->nullable();
-            $table->timestamp('reviewed_at')->nullable();
-            $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->text('review_notes')->nullable();
+            ])->default('published');
 
             // Nếu bộ thẻ được tạo từ một quiz cụ thể
             $table->foreignId('exam_id')
@@ -54,15 +49,13 @@ return new class extends Migration
                 ->constrained('exams')
                 ->nullOnDelete();
 
-            // Màu dùng để hiển thị UI
-            $table->string('color', 20)
-                ->nullable();
-
             $table->timestamps();
 
             $table->index(['user_id']);
             $table->index(['category_id']);
             $table->index(['source_type']);
+            $table->index(['visibility', 'status']);
+            $table->index(['user_id', 'status']);
         });
     }
 

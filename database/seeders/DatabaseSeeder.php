@@ -49,8 +49,9 @@ class DatabaseSeeder extends Seeder
         //         // CourseSeeder::class,
         //     // ChapterLessonSeeder::class,
         $this->call([
-            RandomChatSeeder::class,
-            TransactionSeeder::class,
+            // RandomChatSeeder::class,
+            // TransactionSeeder::class,
+            // AchievementSeeder::class,
         ]);
         // ]);
     }

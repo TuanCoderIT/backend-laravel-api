@@ -31,6 +31,7 @@ return new class extends Migration {
             // Tổng số lần ôn tập
             $table->unsignedInteger('review_count')->default(0);
 
+            // Lần cuối ôn tập
             $table->timestamp('last_reviewed_at')->nullable();
 
             // Phục vụ spaced repetition sau này

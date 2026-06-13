@@ -51,6 +51,29 @@ class PaymentController extends Controller
 
         ksort($inputData);
 
+        // $query = "";
+        // $hashdata = "";
+
+        // foreach ($inputData as $key => $value) {
+        //     $hashdata .= urlencode($key) . "=" . urlencode($value) . "&";
+        //     $query .= urlencode($key) . "=" . urlencode($value) . "&";
+        // }
+
+        // $hashdata = rtrim($hashdata, "&");
+        // $query = rtrim($query, "&");
+
+        // $vnp_SecureHash = hash_hmac('sha512', $hashdata, trim($vnp_HashSecret));
+
+        // $paymentUrl = $vnp_Url . "?" . $query . "&vnp_SecureHash=" . $vnp_SecureHash;
+
+
+        // $hashData = http_build_query($inputData, '', '&', PHP_QUERY_RFC3986);
+
+        // $vnp_SecureHash = hash_hmac('sha512', $hashData, trim($vnp_HashSecret));
+
+        // $paymentUrl = $vnp_Url . '?' . $hashData . '&vnp_SecureHash=' . $vnp_SecureHash;
+
+
         $hashDataArr = [];
         foreach ($inputData as $key => $value) {
             $hashDataArr[] = urlencode($key) . "=" . urlencode($value);
@@ -66,6 +89,11 @@ class PaymentController extends Controller
         Cache::put('vnpay_user_' . $vnp_TxnRef, $user->id, now()->addMinutes(15));
 
         return response()->json([
+            'tmn_code' => $vnp_TmnCode,
+            'secret_length' => strlen(trim($vnp_HashSecret)),
+            // 'hash_data' => $hashData,
+            'secure_hash' => $vnp_SecureHash,
+
             'payment_url' => $paymentUrl
         ]);
     }

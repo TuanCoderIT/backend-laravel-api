@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\GroupJoinRequest;
@@ -95,7 +96,7 @@ class GroupController extends Controller
         } catch (\Exception $e) {
             $this->deleteImageFile($imagePath);
 
-            \Log::error("Group creation failed: " . $e->getMessage());
+            Log::error("Group creation failed: " . $e->getMessage());
             return response()->json(['message' => 'Group creation failed.'], 500);
         }
     }
@@ -156,7 +157,7 @@ class GroupController extends Controller
             if ($newImagePath) {
                 $this->deleteImageFile($newImagePath);
             }
-            \Log::error("Group update failed: " . $e->getMessage());
+            Log::error("Group update failed: " . $e->getMessage());
             return response()->json(['message' => 'Group update failed.'], 500);
         }
     }
@@ -180,7 +181,7 @@ class GroupController extends Controller
             return response()->json(['message' => 'Group deleted']);
 
         } catch (\Exception $e) {
-            \Log::error("Group deletion failed: " . $e->getMessage());
+            Log::error("Group deletion failed: " . $e->getMessage());
             return response()->json(['message' => 'Group deletion failed.'], 500);
         }
     }

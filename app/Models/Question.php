@@ -26,4 +26,9 @@ class Question extends Model
     {
         return $this->belongsToMany(Exam::class)->withPivot('order');
     }
+
+    public function resultAnswers()
+    {
+        return $this->hasMany(ResultAnswer::class);
+    }
 }

@@ -3,14 +3,24 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\FlashcardProgressResource;
+use App\Http\Resources\FlashcardSetResource;
 use App\Models\Flashcard;
 use App\Models\FlashcardSet;
 use App\Models\FlashcardProgress;
+use App\Services\GamificationService;
+use App\Services\AchievementService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class FlashcardStudyController extends Controller
 {
+    public function __construct(
+        private GamificationService $gamificationService,
+        private AchievementService $achievementService
+    ) {
+    }
+
     /**
      * GET /api/flashcard-sets/{flashcardSet}/study
      * Lấy dữ liệu học.
@@ -18,8 +28,11 @@ class FlashcardStudyController extends Controller
     public function study(Request $request, FlashcardSet $flashcardSet): JsonResponse
     {
         if (
-            $flashcardSet->status !== 'published' &&
-            $flashcardSet->user_id !== $request->user()->id
+            $flashcardSet->user_id !== $request->user()->id &&
+            (
+                $flashcardSet->visibility !== 'public' ||
+                $flashcardSet->status !== 'published'
+            )
         ) {
             return response()->json([
                 'success' => false,
@@ -28,15 +41,24 @@ class FlashcardStudyController extends Controller
         }
 
         $flashcardSet->load([
+            'category:id,name',
             'flashcards.progress' => function ($query) use ($request) {
                 $query->where('user_id', $request->user()->id);
             },
-        ]);
+        ])->loadCount('flashcards')
+            ->loadCount([
+                'flashcards as mastered_count' => function ($query) use ($request) {
+                    $query->whereHas('progress', function ($query) use ($request) {
+                        $query->where('user_id', $request->user()->id)
+                            ->where('status', 'mastered');
+                    });
+                },
+            ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Lấy dữ liệu học thành công.',
-            'data'    => $flashcardSet,
+            'data'    => new FlashcardSetResource($flashcardSet),
         ]);
     }
 
@@ -86,10 +108,15 @@ class FlashcardStudyController extends Controller
 
         $progress->save();
 
+        $this->gamificationService->reward($request->user(), 5, 'flashcard_review', $flashcard->id, 'Review flashcard');
+
+        $unlockedAchievements = $this->achievementService->checkAndUnlock($request->user(), 'flashcard_reviewed');
+
         return response()->json([
             'success' => true,
             'message' => 'Cập nhật tiến độ học thành công.',
-            'data'    => $progress,
+            'data'    => new FlashcardProgressResource($progress),
+            'unlocked_achievements' => $unlockedAchievements,
         ]);
     }
 }

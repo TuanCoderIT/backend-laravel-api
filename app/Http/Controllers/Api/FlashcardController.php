@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\FlashcardResource;
 use App\Models\Flashcard;
 use App\Models\FlashcardSet;
 use Illuminate\Http\Request;
@@ -22,26 +23,23 @@ class FlashcardController extends Controller
                 'message' => 'Bạn không có quyền thêm thẻ vào bộ này.',
             ], 403);
         }
-        
-        // if (in_array($flashcardSet->status, ['pending', 'published'])) {
-        //     return response()->json([
-        //         'success' => false,
-        //         'message' => 'Không thể chỉnh sửa bộ thẻ ở trạng thái hiện tại.',
-        //     ], 422);
-        // }
 
         $validated = $request->validate([
-            'front_text'  => ['required', 'string'],
-            'back_text'   => ['required', 'string'],
-            'explanation' => ['nullable', 'string'],
+            'term' => ['required', 'string', 'max:1000'],
+            'definition' => ['required', 'string', 'max:2000'],
+            'explanation' => ['nullable', 'string', 'max:3000'],
         ]);
 
-        $flashcard = $flashcardSet->flashcards()->create($validated);
+        $flashcard = $flashcardSet->flashcards()->create([
+            'front_text' => $validated['term'],
+            'back_text' => $validated['definition'],
+            'explanation' => $validated['explanation'] ?? null,
+        ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Thêm flashcard thành công.',
-            'data'    => $flashcard,
+            'data' => new FlashcardResource($flashcard),
         ], 201);
     }
 
@@ -60,25 +58,24 @@ class FlashcardController extends Controller
             ], 403);
         }
 
-        // if (in_array($flashcardSet->status, ['pending', 'published'])) {
-        //     return response()->json([
-        //         'success' => false,
-        //         'message' => 'Không thể chỉnh sửa bộ thẻ ở trạng thái hiện tại.',
-        //     ], 422);
-        // }
-
         $validated = $request->validate([
-            'front_text'  => ['sometimes', 'required', 'string'],
-            'back_text'   => ['sometimes', 'required', 'string'],
-            'explanation' => ['nullable', 'string'],
+            'term' => ['sometimes', 'required', 'string', 'max:1000'],
+            'definition' => ['sometimes', 'required', 'string', 'max:2000'],
+            'explanation' => ['nullable', 'string', 'max:3000'],
         ]);
 
-        $flashcard->update($validated);
+        $flashcard->update([
+            'front_text' => $validated['term'] ?? $flashcard->front_text,
+            'back_text' => $validated['definition'] ?? $flashcard->back_text,
+            'explanation' => array_key_exists('explanation', $validated)
+                ? $validated['explanation']
+                : $flashcard->explanation,
+        ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Cập nhật flashcard thành công.',
-            'data'    => $flashcard->fresh(),
+            'data' => new FlashcardResource($flashcard->fresh()),
         ]);
     }
 
@@ -95,13 +92,6 @@ class FlashcardController extends Controller
                 'success' => false,
                 'message' => 'Bạn không có quyền xóa flashcard này.',
             ], 403);
-        }
-
-        if (in_array($flashcardSet->status, ['pending', 'published'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Không thể chỉnh sửa bộ thẻ ở trạng thái hiện tại.',
-            ], 422);
         }
 
         $flashcard->delete();
