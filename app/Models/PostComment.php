@@ -19,6 +19,11 @@ class PostComment extends Model
         'parent_id',
     ];
 
+    protected $appends = [
+        'reaction_summary',
+        'user_reaction',
+    ];
+
     /*
      * Bài viết mà comment thuộc về
      */

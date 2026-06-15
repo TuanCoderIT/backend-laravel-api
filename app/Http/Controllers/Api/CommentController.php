@@ -20,8 +20,6 @@ class CommentController extends Controller
             ->with([
                 'user:id,name',
                 'replies.user:id,name',
-                'replies.reactionSummary',
-                'reactionSummary',
             ])
             ->orderByDesc('id')
             ->get();

@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\{
     RealtimeController,
     AIChatController,
     UserAIQuizController,
+    UserAIFlashcardController,
     NotificationController,
     FlashcardSetController,
     FlashcardController,
@@ -43,6 +44,7 @@ use App\Http\Controllers\Admin\{
     AdminGroupController,
     AdminGroupOwnerController,
     AIQuizController,
+    AIFlashcardController,
     FlashcardModerationController,
     AchievementController,
 };
@@ -101,6 +103,16 @@ Route::prefix('admin')
         Route::post('/posts/{id}/hide', [AdminPostController::class, 'hide']);
 
         // ===== Flashcard Sets =====
+        Route::post(
+            'flashcard-sets/ai-generate-from-prompt',
+            [AIFlashcardController::class, 'generateFromPrompt']
+        );
+
+        Route::post(
+            'flashcard-sets/ai-generate-from-file',
+            [AIFlashcardController::class, 'generateFromFile']
+        );
+
         Route::get(
             'flashcard-sets/pending',
             [FlashcardModerationController::class, 'pending']
@@ -399,6 +411,16 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::post(
+        'flashcard-sets/ai-generate-from-prompt',
+        [UserAIFlashcardController::class, 'generateFromPrompt']
+    );
+
+    Route::post(
+        'flashcard-sets/ai-generate-from-file',
+        [UserAIFlashcardController::class, 'generateFromFile']
+    );
+
     Route::get(
         'flashcard-sets/public',
         [FlashcardSetController::class, 'publicIndex']

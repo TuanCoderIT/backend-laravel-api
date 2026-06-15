@@ -9,6 +9,7 @@ use App\Models\PostComment;
 use App\Models\Reaction;
 use App\Events\PostReacted;
 use App\Events\CommentReacted;
+use Illuminate\Support\Facades\Log;
 
 class ReactionController extends Controller
 {
@@ -20,13 +21,14 @@ class ReactionController extends Controller
         $request->validate([
             'target_type' => 'required|string|in:post,comment',
             'target_id' => 'required|integer',
-            'reaction_type' => 'required|string|in:like,love,haha,sad,angry'
+            'reaction_type' => 'required|string|in:like,love,haha,wow,sad,angry'
         ]);
 
         $userId = $request->user()->id;
 
         // Map target_type -> Model
         $model = $request->target_type === 'post' ? Post::class : PostComment::class;
+        $target = $model::findOrFail($request->target_id);
 
         // Xoá reaction cũ (nếu có)
         Reaction::where('reactionable_type', $model)
@@ -43,13 +45,7 @@ class ReactionController extends Controller
         ]);
 
         // Broadcast realtime event
-        if ($request->target_type === 'post') {
-            $post = Post::find($request->target_id);
-            broadcast(new PostReacted($post, $reaction, 'added'));
-        } else {
-            $comment = PostComment::find($request->target_id);
-            broadcast(new CommentReacted($comment, $reaction, 'added'));
-        }
+        $this->broadcastReaction($request->target_type, $target, $reaction, 'added');
 
         return response()->json([
             'message' => 'Reaction saved',
@@ -68,6 +64,7 @@ class ReactionController extends Controller
         ]);
 
         $model = $request->target_type === 'post' ? Post::class : PostComment::class;
+        $target = $model::findOrFail($request->target_id);
 
         Reaction::where('reactionable_type', $model)
             ->where('reactionable_id', $request->target_id)
@@ -75,13 +72,7 @@ class ReactionController extends Controller
             ->delete();
 
         // Broadcast realtime event
-        if ($request->target_type === 'post') {
-            $post = Post::find($request->target_id);
-            broadcast(new PostReacted($post, null, 'removed'));
-        } else {
-            $comment = PostComment::find($request->target_id);
-            broadcast(new CommentReacted($comment, null, 'removed'));
-        }
+        $this->broadcastReaction($request->target_type, $target, null, 'removed');
         return response()->json([
             'message' => 'Reaction removed'
         ]);
@@ -119,5 +110,22 @@ class ReactionController extends Controller
             ->values();
 
         return response()->json($reactions);
+    }
+
+    private function broadcastReaction(string $targetType, $target, $reaction, string $action): void
+    {
+        try {
+            $event = $targetType === 'post'
+                ? new PostReacted($target, $reaction, $action)
+                : new CommentReacted($target, $reaction, $action);
+
+            broadcast($event);
+        } catch (\Throwable $exception) {
+            Log::warning('Reaction saved but broadcast failed', [
+                'target_type' => $targetType,
+                'target_id' => $target->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 }
