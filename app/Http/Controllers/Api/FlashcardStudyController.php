@@ -8,16 +8,20 @@ use App\Http\Resources\FlashcardSetResource;
 use App\Models\Flashcard;
 use App\Models\FlashcardSet;
 use App\Models\FlashcardProgress;
+use App\Models\Notification;
 use App\Services\GamificationService;
 use App\Services\AchievementService;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 
 class FlashcardStudyController extends Controller
 {
     public function __construct(
         private GamificationService $gamificationService,
-        private AchievementService $achievementService
+        private AchievementService $achievementService,
+        private NotificationService $notificationService
     ) {
     }
 
@@ -84,6 +88,12 @@ class FlashcardStudyController extends Controller
             ]
         );
 
+        $flashcard->loadMissing('flashcardSet');
+        $flashcardSet = $flashcard->flashcardSet;
+        $totalCards = $flashcardSet?->flashcards()->count() ?? 0;
+        $masteredBefore = $this->masteredCardsCount($request->user()->id, $flashcardSet?->id);
+        $wasSetCompleted = $totalCards > 0 && $masteredBefore >= $totalCards;
+
         $progress->review_count += 1;
         $progress->last_reviewed_at = now();
 
@@ -112,11 +122,53 @@ class FlashcardStudyController extends Controller
 
         $unlockedAchievements = $this->achievementService->checkAndUnlock($request->user(), 'flashcard_reviewed');
 
+        if (!$wasSetCompleted && $flashcardSet && $totalCards > 0) {
+            $masteredAfter = $this->masteredCardsCount($request->user()->id, $flashcardSet->id);
+
+            if ($masteredAfter >= $totalCards && !$this->hasFlashcardCompletedNotification($request->user()->id, $flashcardSet->id)) {
+                try {
+                    $this->notificationService->flashcardCompleted($request->user()->id, [
+                        'flashcard_set_id' => $flashcardSet->id,
+                        'flashcard_set_title' => $flashcardSet->title,
+                        'cards_count' => $totalCards,
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to create flashcard completed notification', [
+                        'user_id' => $request->user()->id,
+                        'flashcard_set_id' => $flashcardSet->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Cập nhật tiến độ học thành công.',
             'data'    => new FlashcardProgressResource($progress),
             'unlocked_achievements' => $unlockedAchievements,
         ]);
+    }
+
+    private function masteredCardsCount(int $userId, ?int $flashcardSetId): int
+    {
+        if (!$flashcardSetId) {
+            return 0;
+        }
+
+        return FlashcardProgress::where('user_id', $userId)
+            ->where('status', 'mastered')
+            ->whereHas('flashcard', function ($query) use ($flashcardSetId) {
+                $query->where('flashcard_set_id', $flashcardSetId);
+            })
+            ->count();
+    }
+
+    private function hasFlashcardCompletedNotification(int $userId, int $flashcardSetId): bool
+    {
+        return Notification::where('user_id', $userId)
+            ->where('type', 'flashcard_completed')
+            ->where('data->extra_data->flashcard_set_id', $flashcardSetId)
+            ->exists();
     }
 }

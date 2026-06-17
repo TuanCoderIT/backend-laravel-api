@@ -3,27 +3,29 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Notification;
+use App\Http\Requests\NotificationRequest;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class NotificationController extends Controller
 {
-    /**
-     * Lấy danh sách notifications của user hiện tại
-     */
+    public function __construct(
+        private readonly NotificationService $notificationService
+    ) {
+    }
+
     public function index(Request $request)
     {
-        $perPage = $request->get('per_page', 15);
-        $type = $request->get('type'); // filter theo type nếu cần
-        
-        $query = Auth::user()->notifications()
-            ->when($type, function ($q) use ($type) {
-                $q->where('type', $type);
-            })
-            ->orderBy('created_at', 'desc');
+        $perPage = (int) $request->get('per_page', 15);
+        $type = $request->get('type');
 
-        $notifications = $query->paginate($perPage);
+        $notifications = $request->user()
+            ->notifications()
+            ->when($type, function ($query) use ($type) {
+                $query->where('type', $type);
+            })
+            ->latest()
+            ->paginate($perPage);
 
         return response()->json([
             'message' => 'Lấy danh sách thông báo thành công',
@@ -34,39 +36,35 @@ class NotificationController extends Controller
                     'last_page' => $notifications->lastPage(),
                     'per_page' => $notifications->perPage(),
                     'total' => $notifications->total(),
-                    'has_more' => $notifications->hasMorePages()
-                ]
-            ]
+                    'has_more' => $notifications->hasMorePages(),
+                ],
+            ],
         ]);
     }
 
-    /**
-     * Lấy số lượng notifications chưa đọc
-     */
-    public function unreadCount()
+    public function unreadCount(Request $request)
     {
-        $count = Auth::user()->notifications()
+        $count = $request->user()
+            ->notifications()
             ->unread()
             ->count();
 
         return response()->json([
             'message' => 'Lấy số thông báo chưa đọc thành công',
             'data' => [
-                'unread_count' => $count
-            ]
+                'unread_count' => $count,
+            ],
         ]);
     }
 
-    /**
-     * Lấy notifications chưa đọc
-     */
     public function unread(Request $request)
     {
-        $limit = $request->get('limit', 10);
-        
-        $notifications = Auth::user()->notifications()
+        $limit = (int) $request->get('limit', 10);
+
+        $notifications = $request->user()
+            ->notifications()
             ->unread()
-            ->orderBy('created_at', 'desc')
+            ->latest()
             ->limit($limit)
             ->get();
 
@@ -74,25 +72,23 @@ class NotificationController extends Controller
             'message' => 'Lấy thông báo chưa đọc thành công',
             'data' => [
                 'notifications' => $notifications,
-                'count' => $notifications->count()
-            ]
+                'count' => $notifications->count(),
+            ],
         ]);
     }
 
-    /**
-     * Xem chi tiết một notification
-     */
-    public function show($id)
+    public function show(Request $request, $id)
     {
-        $notification = Auth::user()->notifications()->find($id);
+        $notification = $request->user()
+            ->notifications()
+            ->find($id);
 
         if (!$notification) {
             return response()->json([
-                'message' => 'Không tìm thấy thông báo'
+                'message' => 'Không tìm thấy thông báo',
             ], 404);
         }
 
-        // Auto mark as read khi xem chi tiết
         if (!$notification->is_read) {
             $notification->markAsRead();
         }
@@ -100,117 +96,104 @@ class NotificationController extends Controller
         return response()->json([
             'message' => 'Lấy chi tiết thông báo thành công',
             'data' => [
-                'notification' => $notification->fresh()
-            ]
+                'notification' => $notification->fresh(),
+            ],
         ]);
     }
 
-    /**
-     * Đánh dấu một notification đã đọc
-     */
-    public function markAsRead($id)
+    public function markAsRead(Request $request, $id)
     {
-        $notification = Auth::user()->notifications()->find($id);
+        $notification = $request->user()
+            ->notifications()
+            ->find($id);
 
         if (!$notification) {
             return response()->json([
-                'message' => 'Không tìm thấy thông báo'
+                'message' => 'Không tìm thấy thông báo',
             ], 404);
         }
 
-        if ($notification->is_read) {
-            return response()->json([
-                'message' => 'Thông báo đã được đánh dấu đọc trước đó',
-                'data' => [
-                    'notification' => $notification
-                ]
-            ]);
+        if (!$notification->is_read) {
+            $notification->markAsRead();
         }
-
-        $notification->markAsRead();
 
         return response()->json([
             'message' => 'Đánh dấu đã đọc thành công',
             'data' => [
-                'notification' => $notification->fresh()
-            ]
+                'notification' => $notification->fresh(),
+            ],
         ]);
     }
 
-    /**
-     * Đánh dấu tất cả notifications đã đọc
-     */
-    public function markAllAsRead()
+    public function markAllAsRead(Request $request)
     {
-        $updatedCount = Auth::user()->notifications()
+        $updatedCount = $request->user()
+            ->notifications()
             ->unread()
-            ->update(['read_at' => now()]);
+            ->update([
+                'read_at' => now(),
+            ]);
 
         return response()->json([
             'message' => "Đã đánh dấu {$updatedCount} thông báo là đã đọc",
             'data' => [
-                'updated_count' => $updatedCount
-            ]
+                'updated_count' => $updatedCount,
+            ],
         ]);
     }
 
-    /**
-     * Xóa một notification
-     */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
-        $notification = Auth::user()->notifications()->find($id);
+        $notification = $request->user()
+            ->notifications()
+            ->find($id);
 
         if (!$notification) {
             return response()->json([
-                'message' => 'Không tìm thấy thông báo'
+                'message' => 'Không tìm thấy thông báo',
             ], 404);
         }
 
         $notification->delete();
 
         return response()->json([
-            'message' => 'Xóa thông báo thành công'
+            'message' => 'Xóa thông báo thành công',
         ]);
     }
 
-    /**
-     * Xóa tất cả notifications đã đọc
-     */
-    public function clearRead()
+    public function clearRead(Request $request)
     {
-        $deletedCount = Auth::user()->notifications()
-            ->whereNotNull('read_at')
+        $deletedCount = $request->user()
+            ->notifications()
+            ->read()
             ->delete();
 
         return response()->json([
             'message' => "Đã xóa {$deletedCount} thông báo đã đọc",
             'data' => [
-                'deleted_count' => $deletedCount
-            ]
+                'deleted_count' => $deletedCount,
+            ],
         ]);
     }
 
-    /**
-     * Lấy thống kê notifications
-     */
-    public function stats()
+    public function stats(Request $request)
     {
-        $userId = Auth::id();
-        
+        $user = $request->user();
+
         $stats = [
-            'total' => Auth::user()->notifications()->count(),
-            'unread' => Auth::user()->notifications()->unread()->count(),
-            'read' => Auth::user()->notifications()->whereNotNull('read_at')->count(),
-            'today' => Auth::user()->notifications()->whereDate('created_at', today())->count(),
-            'this_week' => Auth::user()->notifications()->whereBetween('created_at', [
-                now()->startOfWeek(),
-                now()->endOfWeek()
-            ])->count(),
+            'total' => $user->notifications()->count(),
+            'unread' => $user->notifications()->unread()->count(),
+            'read' => $user->notifications()->read()->count(),
+            'today' => $user->notifications()->whereDate('created_at', today())->count(),
+            'this_week' => $user->notifications()
+                ->whereBetween('created_at', [
+                    now()->startOfWeek(),
+                    now()->endOfWeek(),
+                ])
+                ->count(),
         ];
 
-        // Thống kê theo type
-        $typeStats = Auth::user()->notifications()
+        $typeStats = $user->notifications()
             ->selectRaw('type, COUNT(*) as count')
             ->groupBy('type')
             ->pluck('count', 'type')
@@ -220,39 +203,32 @@ class NotificationController extends Controller
             'message' => 'Lấy thống kê thông báo thành công',
             'data' => [
                 'stats' => $stats,
-                'by_type' => $typeStats
-            ]
+                'by_type' => $typeStats,
+            ],
         ]);
     }
 
-    /**
-     * Tạo notification mới (for testing/admin)
-     */
-    public function store(Request $request)
+    public function store(NotificationRequest $request)
     {
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'type' => 'required|string|max:255',
-            'title' => 'required|string|max:255',
-            'message' => 'required|string',
-            'data' => 'nullable|array'
-        ]);
+        $validated = $request->validated();
 
-        $notification = Notification::create([
-            'user_id' => $request->user_id,
-            'type' => $request->type,
-            'data' => [
-                'title' => $request->title,
-                'message' => $request->message,
-                'extra_data' => $request->data ?? []
+        $notification = $this->notificationService->create(
+            (int) $validated['user_id'],
+            $validated['type'],
+            [
+                'icon' => $validated['icon'] ?? null,
+                'title' => $validated['title'],
+                'message' => $validated['message'],
+                'action_url' => $validated['action_url'] ?? null,
+                'extra_data' => $validated['data'] ?? [],
             ]
-        ]);
+        );
 
         return response()->json([
             'message' => 'Tạo thông báo thành công',
             'data' => [
-                'notification' => $notification
-            ]
+                'notification' => $notification,
+            ],
         ], 201);
     }
 }

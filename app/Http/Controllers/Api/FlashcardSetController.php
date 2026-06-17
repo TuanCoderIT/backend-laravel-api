@@ -5,12 +5,19 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\FlashcardSetResource;
 use App\Models\FlashcardSet;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class FlashcardSetController extends Controller
 {
+    public function __construct(
+        private NotificationService $notificationService
+    ) {
+    }
+
     /**
      * GET /api/flashcard-sets
      * Danh sách bộ thẻ của user hiện tại.
@@ -208,6 +215,22 @@ class FlashcardSetController extends Controller
             'exam_id'     => $validated['exam_id'] ?? null,
             'status'      => $validated['status'] ?? 'published',
         ]);
+
+        try {
+            $this->notificationService->flashcardSetCreated($request->user()->id, [
+                'flashcard_set_id' => $flashcardSet->id,
+                'flashcard_set_title' => $flashcardSet->title,
+                'cards_count' => 0,
+                'source_type' => $flashcardSet->source_type,
+                'exam_id' => $flashcardSet->exam_id,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to create flashcard set notification', [
+                'user_id' => $request->user()->id,
+                'flashcard_set_id' => $flashcardSet->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'success' => true,

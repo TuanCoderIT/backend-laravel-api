@@ -2,14 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Notification extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
         'user_id',
         'type',
@@ -18,41 +16,75 @@ class Notification extends Model
     ];
 
     protected $casts = [
-        'data'    => 'array',
+        'data' => 'array',
         'read_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
-    /*
-     * Người nhận notification
-     */
+    protected $appends = [
+        'is_read',
+        'title',
+        'message',
+        'icon',
+        'action_url',
+    ];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /*
-     * Đã đọc chưa
-     */
-    public function getIsReadAttribute(): bool
-    {
-        return ! is_null($this->read_at);
-    }
-
-    /*
-     * Đánh dấu đã đọc
-     */
-    public function markAsRead(): void
-    {
-        if (! $this->read_at) {
-            $this->update(['read_at' => now()]);
-        }
-    }
-
-    /*
-     * Scope: chỉ lấy chưa đọc
-     */
-    public function scopeUnread($query)
+    public function scopeUnread(Builder $query): Builder
     {
         return $query->whereNull('read_at');
+    }
+
+    public function scopeRead(Builder $query): Builder
+    {
+        return $query->whereNotNull('read_at');
+    }
+
+    public function markAsRead(): bool
+    {
+        if ($this->read_at) {
+            return true;
+        }
+
+        return $this->forceFill([
+            'read_at' => now(),
+        ])->save();
+    }
+
+    public function markAsUnread(): bool
+    {
+        return $this->forceFill([
+            'read_at' => null,
+        ])->save();
+    }
+
+    public function getIsReadAttribute(): bool
+    {
+        return !is_null($this->read_at);
+    }
+
+    public function getTitleAttribute(): ?string
+    {
+        return $this->data['title'] ?? null;
+    }
+
+    public function getMessageAttribute(): ?string
+    {
+        return $this->data['message'] ?? null;
+    }
+
+    public function getIconAttribute(): ?string
+    {
+        return $this->data['icon'] ?? null;
+    }
+
+    public function getActionUrlAttribute(): ?string
+    {
+        return $this->data['action_url'] ?? null;
     }
 }

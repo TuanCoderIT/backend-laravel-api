@@ -9,14 +9,17 @@ use App\Models\ResultAnswer;
 use App\Models\Exam;
 use App\Services\GamificationService;
 use App\Services\AchievementService;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class ResultController extends Controller
 {
     public function __construct(
         private GamificationService $gamificationService,
-        private AchievementService $achievementService
+        private AchievementService $achievementService,
+        private NotificationService $notificationService
     ) {
     }
 
@@ -71,6 +74,9 @@ class ResultController extends Controller
         $totalQuestions = $questions->count();
         $score = 0;
         $resultAnswersData = [];
+        $previousBestScore = Result::where('user_id', $userId)
+            ->where('exam_id', $examId)
+            ->max('percentage');
 
         foreach ($validated['answers'] as $answerData) {
             $questionId = $answerData['question_id'];
@@ -124,6 +130,33 @@ class ResultController extends Controller
         $this->gamificationService->reward($request->user(), 50, 'quiz_completed', $result->id, 'Hoàn thành quiz');
 
         $unlockedAchievements = $this->achievementService->checkAndUnlock($request->user(), 'quiz_submitted', ['result' => $result]);
+
+        try {
+            $notificationData = [
+                'quiz_id' => $exam->id,
+                'quiz_title' => $exam->title,
+                'result_id' => $result->id,
+                'score' => $score,
+                'total' => $totalQuestions,
+                'percentage' => $percentage,
+                'passing_score' => $exam->passing_score ?? 70,
+            ];
+
+            $this->notificationService->quizCompleted($userId, $notificationData);
+
+            if ($previousBestScore !== null && $percentage > (int) $previousBestScore) {
+                $this->notificationService->quizBestScore($userId, array_merge($notificationData, [
+                    'previous_best' => (int) $previousBestScore,
+                ]));
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Failed to create quiz result notification', [
+                'user_id' => $userId,
+                'exam_id' => $examId,
+                'result_id' => $result->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'message' => 'Result saved successfully',
