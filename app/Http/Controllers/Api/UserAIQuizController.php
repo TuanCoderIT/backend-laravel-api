@@ -8,19 +8,24 @@ use App\Http\Requests\UserAIQuizFromPromptRequest;
 use App\Models\TokenPricing;
 use App\Services\AIQuizFromFileService;
 use App\Services\AIQuizFromPromptService;
+use App\Services\NotificationService;
 use Exception;
+use Illuminate\Support\Facades\Log;
 
 class UserAIQuizController extends Controller
 {
     private AIQuizFromFileService $aiQuizFromFileService;
     private AIQuizFromPromptService $aiQuizFromPromptService;
+    private NotificationService $notificationService;
 
     public function __construct(
         AIQuizFromFileService $aiQuizFromFileService,
-        AIQuizFromPromptService $aiQuizFromPromptService
+        AIQuizFromPromptService $aiQuizFromPromptService,
+        NotificationService $notificationService
     ) {
         $this->aiQuizFromFileService = $aiQuizFromFileService;
         $this->aiQuizFromPromptService = $aiQuizFromPromptService;
+        $this->notificationService = $notificationService;
     }
 
     /**
@@ -80,6 +85,8 @@ class UserAIQuizController extends Controller
                 // Add price to response
                 $exam->price_token = $request->input('price_token', 0);
             }
+
+            $this->notifyAiQuizGenerated($request->user()->id, $exam, 'file');
 
             return response()->json([
                 'message' => 'Quiz được tạo thành công từ file với AI',
@@ -151,6 +158,8 @@ class UserAIQuizController extends Controller
                 $exam->price_token = $request->input('price_token', 0);
             }
 
+            $this->notifyAiQuizGenerated($request->user()->id, $exam, 'prompt');
+
             return response()->json([
                 'message' => 'Quiz được tạo thành công từ prompt với AI',
                 'data' => $exam->load('questions', 'category'),
@@ -161,6 +170,29 @@ class UserAIQuizController extends Controller
                 'message' => 'Không thể tạo quiz từ prompt',
                 'error' => $e->getMessage(),
             ], 422);
+        }
+    }
+
+    private function notifyAiQuizGenerated(int $userId, $exam, string $source): void
+    {
+        try {
+            $questionsCount = $exam->relationLoaded('questions')
+                ? $exam->questions->count()
+                : $exam->questions()->count();
+
+            $this->notificationService->aiQuizGenerated($userId, [
+                'quiz_id' => $exam->id,
+                'quiz_title' => $exam->title,
+                'questions_count' => $questionsCount,
+                'source' => $source,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to create AI quiz notification', [
+                'user_id' => $userId,
+                'exam_id' => $exam->id ?? null,
+                'source' => $source,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }

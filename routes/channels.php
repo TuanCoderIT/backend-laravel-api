@@ -24,3 +24,7 @@ Broadcast::channel('group.{groupId}.posts', function ($user, $groupId) {
         ->where('user_id', $user->id)
         ->exists();
 }, ['guards' => ['api']]);
+
+Broadcast::channel('notifications.{userId}', function ($user, $userId) {
+    return (int) $user->id === (int) $userId;
+});

@@ -9,15 +9,18 @@ use App\Models\FlashcardSet;
 use App\Models\Result;
 use App\Services\GamificationService;
 use App\Services\AchievementService;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ResultFlashcardController extends Controller
 {
     public function __construct(
         private GamificationService $gamificationService,
-        private AchievementService $achievementService
+        private AchievementService $achievementService,
+        private NotificationService $notificationService
     ) {}
 
     /**
@@ -106,6 +109,22 @@ class ResultFlashcardController extends Controller
             $request->user(),
             'wrong_answer_flashcards_created'
         );
+
+        try {
+            $this->notificationService->flashcardSetCreated($request->user()->id, [
+                'flashcard_set_id' => $flashcardSet->id,
+                'flashcard_set_title' => $flashcardSet->title,
+                'cards_count' => $flashcardSet->flashcards_count,
+                'source_type' => $flashcardSet->source_type,
+                'exam_id' => $flashcardSet->exam_id,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to create wrong-answer flashcard notification', [
+                'user_id' => $request->user()->id,
+                'flashcard_set_id' => $flashcardSet->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'success' => true,

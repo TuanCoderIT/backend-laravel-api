@@ -8,10 +8,17 @@ use App\Models\GroupMember;
 use App\Models\GroupJoinRequest;
 use App\Models\ChatThread;
 use App\Models\ChatParticipant;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class GroupMemberController extends Controller
 {
+    public function __construct(
+        private NotificationService $notificationService
+    ) {
+    }
+
     // Join group
     public function join($groupId)
     {
@@ -46,6 +53,22 @@ class GroupMemberController extends Controller
                 'thread_id' => $thread->id,
                 'user_id' => Auth::id(),
             ]);
+        }
+
+        if ($member->wasRecentlyCreated) {
+            try {
+                $this->notificationService->joinedGroup(Auth::id(), [
+                    'group_id' => $group->id,
+                    'group_name' => $group->name,
+                    'group_slug' => $group->slug,
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to create joined group notification', [
+                    'user_id' => Auth::id(),
+                    'group_id' => $group->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         return response()->json(['message' => 'Joined group']);

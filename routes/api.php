@@ -67,6 +67,7 @@ Route::prefix('admin')
         Route::apiResource('courses', CourseController::class);
         Route::apiResource('documents', DocumentController::class);
         Route::apiResource('achievements', AchievementController::class);
+        Route::post('/notifications', [NotificationController::class, 'store']);
         Route::prefix('courses/{course}')->group(function () {
             Route::get('chapters', [CourseChapterController::class, 'index']);
             Route::post('chapters', [CourseChapterController::class, 'store']);
@@ -389,24 +390,19 @@ Route::middleware('auth:sanctum')->group(function () {
     | NOTIFICATIONS
     |--------------------------------------------------------------------------
     */
-    Route::prefix('notifications')->group(function () {
-        // Danh sách và thống kê
+    Route::middleware('auth:sanctum')->prefix('notifications')->group(function () {
         Route::get('/', [NotificationController::class, 'index']);
+
         Route::get('/unread', [NotificationController::class, 'unread']);
         Route::get('/unread-count', [NotificationController::class, 'unreadCount']);
         Route::get('/stats', [NotificationController::class, 'stats']);
 
-        // Actions
-        Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+        Route::patch('/read-all', [NotificationController::class, 'markAllAsRead']);
         Route::delete('/clear-read', [NotificationController::class, 'clearRead']);
 
-        // Individual notification
         Route::get('/{id}', [NotificationController::class, 'show']);
-        Route::post('/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::patch('/{id}/read', [NotificationController::class, 'markAsRead']);
         Route::delete('/{id}', [NotificationController::class, 'destroy']);
-
-        // Create (for testing/admin)
-        Route::post('/', [NotificationController::class, 'store']);
     });
 });
 

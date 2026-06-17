@@ -8,10 +8,17 @@ use App\Models\GroupMember;
 use App\Models\Group;
 use App\Models\ChatThread;
 use App\Models\ChatParticipant;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class GroupJoinRequestController extends Controller
 {
+    public function __construct(
+        private NotificationService $notificationService
+    ) {
+    }
+
     public function list($groupId)
     {
         return GroupJoinRequest::where('group_id', $groupId)
@@ -36,7 +43,7 @@ class GroupJoinRequestController extends Controller
 
         $req->update(['status' => 'approved']);
 
-        GroupMember::firstOrCreate([
+        $member = GroupMember::firstOrCreate([
             'group_id' => $group->id,
             'user_id' => $req->user_id
         ]);
@@ -52,6 +59,22 @@ class GroupJoinRequestController extends Controller
                 'thread_id' => $thread->id,
                 'user_id' => $req->user_id,
             ]);
+        }
+
+        if ($member->wasRecentlyCreated) {
+            try {
+                $this->notificationService->joinedGroup($req->user_id, [
+                    'group_id' => $group->id,
+                    'group_name' => $group->name,
+                    'group_slug' => $group->slug,
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to create approved group join notification', [
+                    'user_id' => $req->user_id,
+                    'group_id' => $group->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         return response()->json(['message' => 'Request approved']);

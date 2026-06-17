@@ -9,10 +9,15 @@ use App\Models\Result;
 use App\Models\FlashcardProgress;
 use App\Models\FlashcardSet;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AchievementService
 {
-    public function __construct(private GamificationService $gamificationService) {}
+    public function __construct(
+        private GamificationService $gamificationService,
+        private NotificationService $notificationService
+    ) {
+    }
 
     /**
      * Unlock an achievement for a user if not already unlocked.
@@ -38,7 +43,7 @@ class AchievementService
         }
 
         // Lock in DB transaction
-        return DB::transaction(function () use ($user, $achievement) {
+        $unlockedAchievement = DB::transaction(function () use ($user, $achievement) {
             // Re-check inside transaction to prevent race conditions
             $alreadyUnlocked = UserAchievement::where('user_id', $user->id)
                 ->where('achievement_id', $achievement->id)
@@ -69,6 +74,26 @@ class AchievementService
 
             return $achievement;
         });
+
+        if ($unlockedAchievement) {
+            try {
+                $this->notificationService->achievementUnlocked($user->id, [
+                    'achievement_id' => $unlockedAchievement->id,
+                    'achievement_code' => $unlockedAchievement->code,
+                    'achievement_name' => $unlockedAchievement->name,
+                    'icon' => $unlockedAchievement->icon,
+                    'xp_reward' => $unlockedAchievement->xp_reward,
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to create achievement notification', [
+                    'user_id' => $user->id,
+                    'achievement_id' => $unlockedAchievement->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return $unlockedAchievement;
     }
 
     /**
