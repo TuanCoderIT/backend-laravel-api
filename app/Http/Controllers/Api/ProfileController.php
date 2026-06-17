@@ -18,17 +18,22 @@ class ProfileController extends Controller
     public function update(UpdateProfileRequest $request)
     {
         $user = $request->user();
+        $data = $request->validated();
 
         if ($request->hasFile('avatar')) {
-            if ($user->avatar && Storage::exists($user->avatar)) {
-                Storage::delete($user->avatar);
+            if ($user->avatar) {
+                $oldPath = str_replace(asset('storage') . '/', '', $user->avatar);
+                if (Storage::disk('public')->exists($oldPath)) {
+                    Storage::disk('public')->delete($oldPath);
+                }
             }
             $file = $request->file('avatar');
-            $filename = time() . '-' . $file->getClientOriginalName();
-            $path = $file->storeAs('uploads/avatars', $filename, 'public'); // lưu trong storage/app/public/uploads/avatars
-            $request['avatar'] = asset('storage/uploads/avatars/' . $filename); // Tạo URL đầy đủ
+            $filename = time() . '-' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('uploads/avatars', $filename, 'public');
+            $data['avatar'] = asset('storage/' . $path);
         }
-        $user->update($request->validated());
+        $user->update($data);
+
         return response()->json($user);
     }
 
