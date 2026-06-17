@@ -19,6 +19,13 @@
 /storage/*.key
 /storage/pail
 /vendor
+*.pem
+*_dump.sql
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/*.tfvars
+terraform/.terraform/
+terraform/.terraform.lock.hcl
 Homestead.json
 Homestead.yaml
 Thumbs.db
