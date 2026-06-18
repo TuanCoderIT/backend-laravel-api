@@ -12,47 +12,37 @@ use App\Models\Reaction;
 use Database\Seeders\RandomChatSeeder;
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // Nếu muốn giữ User mẫu thì để lại:
-        // \App\Models\User::factory(10)->create();
-        // \App\Models\Exam::factory(100)->create();
-        // Tạo 3 nhóm
-        // Group::factory()->count(3)->create();
-
-        // Tạo 10 bài post
-        // Post::factory()->count(10)->create();
-
-        // Tạo comment (5)
-        // PostComment::factory()->count(5)->create();
-
-        // Tạo reaction (10)
-        // Reaction::factory()->count(10)->create();
         // Hoặc xoá nếu không cần:
-        // \App\Models\User::factory()->create([
-        //     'name' => 'Test User',
-        //     'email' => 'test@example.com',
-        // ]);
+        \App\Models\User::firstOrCreate(
+            ['email' => 'test@example.com'],
+            ['name' => 'Test User', 'password' => bcrypt('password')]
+        );
 
         // Thêm Seeder bạn cần gọi:
-        // $this->call([
-        //         // CategorySeeder::class,
-        //         // ExamSeeder::class,
-        //         // QuestionSeeder::class,
-        //         // DocumentSeeder::class,
-        //         // ExamQuestionSeeder::class,
-        //         // TokenSeeder::class,  
-        //         // UserSeeder::class,
-        //         // CourseSeeder::class,
-        //     // ChapterLessonSeeder::class,
         $this->call([
-            // RandomChatSeeder::class,
-            // TransactionSeeder::class,
-            // AchievementSeeder::class,
+            UserSeeder::class,
+            CategorySeeder::class,
+            ExamSeeder::class,
+            QuestionSeeder::class,
+            DocumentSeeder::class,
+            ExamQuestionSeeder::class,
+            TokenSeeder::class,
+            CourseSeeder::class,
+            ChapterLessonSeeder::class,
         ]);
-        // ]);
+
+        // Tạo dữ liệu cộng đồng sau khi đã có users.
+        Group::factory()->count(3)->create();
+        Post::factory()->count(10)->create();
+        PostComment::factory()->count(5)->create();
+        Reaction::factory()->count(10)->create();
+
+        $this->call([
+            RandomChatSeeder::class,
+            TransactionSeeder::class,
+            AchievementSeeder::class,
+        ]);
     }
 }

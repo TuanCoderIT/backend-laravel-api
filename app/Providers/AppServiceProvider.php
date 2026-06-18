@@ -9,6 +9,8 @@ use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use App\Models\Course;
 use App\Policies\CoursePolicy;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -36,6 +38,14 @@ class AppServiceProvider extends ServiceProvider
                     SecurityScheme::http('bearer')
                 );
             });
+
+        Gate::define('viewApiDocs', function (?object $user = null, ?Request $request = null) {
+            if (app()->environment('local')) {
+                return true;
+            }
+
+            return (bool) env('SCRAMBLE_ALLOW_DOCS', false);
+        });
     }
     
     protected $policies = [
